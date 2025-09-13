@@ -1,1 +1,3 @@
-export const MESSAGE = "Hello from the state management!";
+import Statety from "./store";
+
+export default Statety;
