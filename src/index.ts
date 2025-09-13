@@ -1,0 +1,1 @@
+export const MESSAGE = "Hello from the state management!";
