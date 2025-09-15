@@ -12,10 +12,18 @@ class Statety {
     }
 
     get<T>(key: StatetyKey<T>): T | null {
+        if (!store.has(key)) {
+            return null;
+        }
+
         return store.get(key) as T | null;
     }
 
     set<T>(key: StatetyKey<T>, value: T | null | ((state: T | null) => T| null)) {
+        if (!store.has(key)) {
+            return; // Silent fail
+        }
+
         if (typeof value === 'function') {
             const currentState = store.get(key) as T | null;
             const clonedState = currentState ? structuredClone(currentState) : null;
@@ -29,6 +37,11 @@ class Statety {
     }
 
     subscribe<T>(key: StatetyKey<T>, callback: () => void): () => void {
+        if (!store.has(key)) {
+            // Return a no-op unsubscribe function
+            return () => {};
+        }
+
         const keySubscribers = subscribers.get(key);
         if (keySubscribers) {
             keySubscribers.add(callback);
@@ -40,6 +53,13 @@ class Statety {
                 keySubscribers.delete(callback);
             }
         };
+    }
+
+    delete<T>(key: StatetyKey<T>) {
+        this.set(key, null);
+
+        store.delete(key);
+        subscribers.delete(key);
     }
 
     private notify<T>(key: StatetyKey<T>) {
