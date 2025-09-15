@@ -1,11 +1,13 @@
-type StatetyKey<T> = symbol & { __type: T };
+export type StatetyKey<T> = symbol & { __type: T };
 
 const store = new Map();
+const subscribers = new Map<symbol, Set<() => void>>();
 
 class Statety {
     create<T>(keyName: string, defaultValue?: T): StatetyKey<T> {
         const key = Symbol(keyName) as StatetyKey<T>;
         store.set(key, defaultValue ?? null);
+        subscribers.set(key, new Set());
         return key;
     }
 
@@ -21,6 +23,29 @@ class Statety {
             store.set(key, updatedValue);
         } else {
             store.set(key, value);
+        }
+
+        this.notify(key);
+    }
+
+    subscribe<T>(key: StatetyKey<T>, callback: () => void): () => void {
+        const keySubscribers = subscribers.get(key);
+        if (keySubscribers) {
+            keySubscribers.add(callback);
+        }
+        
+        return () => {
+            const keySubscribers = subscribers.get(key);
+            if (keySubscribers) {
+                keySubscribers.delete(callback);
+            }
+        };
+    }
+
+    private notify<T>(key: StatetyKey<T>) {
+        const keySubscribers = subscribers.get(key);
+        if (keySubscribers) {
+            keySubscribers.forEach(callback => callback());
         }
     }
 }
