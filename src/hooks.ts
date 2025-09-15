@@ -1,8 +1,7 @@
 import { useSyncExternalStore, useCallback } from 'react';
-import statety from './store';
-import { StatetyKey } from './store';
+import statety, { AnyStatetyKey } from './store';
 
-export function useStatety<T>(key: StatetyKey<T>): T | null {
+export function useStatety<T>(key: AnyStatetyKey<T>): T | null {
     const subscribe = useCallback((callback: () => void) => {
         return statety.subscribe(key, callback);
     }, [key]);
