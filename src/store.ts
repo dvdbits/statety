@@ -1,23 +1,24 @@
 export type StatetyKey<T> = symbol & { __type: T; __keyBrand?: 'state' };
 export type DerivedStatetyKey<T> = symbol & { __type: T; __keyBrand?: 'derived' };
+export type ComputedStatetyKey<T> = symbol & { __type: T; __keyBrand?: 'computed' };
 
-export type AnyStatetyKey<T> = StatetyKey<T> | DerivedStatetyKey<T>;
+export type AnyStatetyKey<T> = StatetyKey<T> | DerivedStatetyKey<T> | ComputedStatetyKey<T>;
 
 const store = new Map();
 const subscribers = new Map<symbol, Set<() => void>>();
 
 class Statety {
     /* create key methods */
-    create<T>(keyName: string, defaultValue?: T): StatetyKey<T> {
+    create<T>(keyName: string, defaultValue: T | null = null): StatetyKey<T> {
         const key = Symbol(keyName) as StatetyKey<T>;
-        store.set(key, defaultValue ?? null);
+        store.set(key, defaultValue);
         subscribers.set(key, new Set());
         return key;
     }
 
     derive<T, U>(
         keyName: string,
-        sourceKey: StatetyKey<T>,
+        sourceKey: AnyStatetyKey<T>,
         computeFn: (state: T | null) => U
       ): DerivedStatetyKey<U> {
         const key = Symbol(keyName) as DerivedStatetyKey<U>;
@@ -31,6 +32,30 @@ class Statety {
         };
 
         this.subscribe(sourceKey, computeAndSet);
+        computeAndSet();
+        return key;
+    }
+
+    compute<T extends readonly any[], U>(
+        keyName: string,
+        deps: { [K in keyof T]: AnyStatetyKey<T[K]> },
+        fn: (values: { [K in keyof T]: T[K] }) => U
+      ): ComputedStatetyKey<U> {
+        const key = Symbol(keyName) as ComputedStatetyKey<U>;
+        store.set(key, null);
+        subscribers.set(key, new Set());
+
+        const computeAndSet = () => {
+            const depValues = deps.map(depKey => this.get(depKey)) as { [K in keyof T]: T[K] };
+            const value = fn(depValues);
+            store.set(key, value);
+            this.notify(key);
+        };
+
+        deps.forEach(depKey => {
+            this.subscribe(depKey, computeAndSet);
+        });
+
         computeAndSet();
         return key;
     }
@@ -53,7 +78,7 @@ class Statety {
         let updatedValue = value;
         if (typeof value === 'function') {
             const currentState = store.get(key) as T | null;
-            const clonedState = currentState ? structuredClone(currentState) : null;
+            const clonedState = currentState !== null ? structuredClone(currentState) : null;
             updatedValue = (value as (state: T | null) => T | null)(clonedState);
         }
 
