@@ -2,12 +2,14 @@
   "name": "statety",
   "version": "0.0.0",
   "description": "A React state management library",
-  "main": "dist/index.cjs.js",
+  "main": "dist/index.cjs",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "build": "rollup -c"
+    "build": "rollup -c && tsc",
+    "build:rollup": "rollup -c",
+    "build:types": "tsc"
   },
   "peerDependencies": {
     "react": "^19.1.1",
