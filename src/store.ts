@@ -6,6 +6,7 @@ export type AnyStatetyKey<T> = StatetyKey<T> | DerivedStatetyKey<T> | ComputedSt
 
 const store = new Map();
 const subscribers = new Map<symbol, Set<() => void>>();
+const cleanupFunctions = new Map<symbol, (() => void)[]>();
 
 class Statety {
     /* create key methods */
@@ -31,7 +32,9 @@ class Statety {
           this.changeAndNotify(key, derivedValue);
         };
 
-        this.subscribe(sourceKey, computeAndSet);
+        const unsubscribe = this.subscribe(sourceKey, computeAndSet);
+        cleanupFunctions.set(key, [unsubscribe]);
+
         computeAndSet();
         return key;
     }
@@ -52,9 +55,12 @@ class Statety {
             this.notify(key);
         };
 
+        const cleanups: (() => void)[] = [];
         deps.forEach(depKey => {
-            this.subscribe(depKey, computeAndSet);
+            const unsubscribe = this.subscribe(depKey, computeAndSet);
+            cleanups.push(unsubscribe);
         });
+        cleanupFunctions.set(key, cleanups);
 
         computeAndSet();
         return key;
@@ -107,8 +113,13 @@ class Statety {
     delete<T>(key: AnyStatetyKey<T>) {
         this.changeAndNotify(key, null);
 
-        store.delete(key);
         subscribers.delete(key);
+        const cfs = cleanupFunctions.get(key);
+        if (cfs) {
+            cfs.forEach(cleanupFunction => cleanupFunction());
+            cleanupFunctions.delete(key);
+        }
+        store.delete(key);
     }
 
     /* private methods */
