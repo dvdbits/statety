@@ -1,3 +1,5 @@
+import { produce } from "immer";
+
 export type StatetyKey<T> = symbol & { __type: T; __keyBrand?: 'state' };
 export type DerivedStatetyKey<T> = symbol & { __type: T; __keyBrand?: 'derived' };
 export type ComputedStatetyKey<T> = symbol & { __type: T; __keyBrand?: 'computed' };
@@ -12,8 +14,10 @@ class Statety {
     /* create key methods */
     create<T>(keyName: string, defaultValue: T | null = null): StatetyKey<T> {
         const key = Symbol(keyName) as StatetyKey<T>;
-        store.set(key, defaultValue);
+        store.set(key, null);
         subscribers.set(key, new Set());
+
+        this.set(key, defaultValue);
         return key;
     }
 
@@ -84,8 +88,11 @@ class Statety {
         let updatedValue = value;
         if (typeof value === 'function') {
             const currentState = store.get(key) as T | null;
-            const clonedState = currentState !== null ? structuredClone(currentState) : null;
-            updatedValue = (value as (state: T | null) => T | null)(clonedState);
+            updatedValue = produce(currentState, (draft: T | null) => {
+                return (value as (state: T | null) => T | null)(draft);
+            });
+        } else if (value !== null && typeof value === "object") {
+            updatedValue = structuredClone(value);
         }
 
         this.changeAndNotify(key, updatedValue);
@@ -132,8 +139,12 @@ class Statety {
     }
 
     private changeAndNotify<T>(key: AnyStatetyKey<T>, value: T | null) {
-        store.set(key, value);
-        this.notify(key);
+        const oldValue = store.get(key) as T | null;
+    
+        if (oldValue !== value) {
+            store.set(key, value);
+            this.notify(key);
+        }
     }
 }
 
