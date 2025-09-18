@@ -186,6 +186,14 @@ I am considering adding runtime checks in the future to prevent this manual muta
 
 **What happens if I try to ```set``` a key that does not longer exists?**
 
-If you attempt to set a value for a key that no longer exists in the store, the operation will silently fail without throwing any errors. This is intentional because the situation should typically represent an obviously incorrect usage pattern. In addition, due to how reactivity and rerenders work, sometimes set calls may still occur for keys that have already been deleted—often these calls don’t carry meaningful intent. Silently ignoring these avoids unnecessary overhead and noise from error handling, keeping the library behavior simple and predictable.
+If you attempt to set a value for a key that no longer exists in the store, the operation will silently fail without throwing any errors. This is intentional because the situation should typically represent an obviously incorrect usage pattern. In addition, due to how reactivity and rerenders work, sometimes set calls may still occur for keys that have already been deleted. Often these calls don’t carry meaningful intent. Silently ignoring these avoids unnecessary overhead and noise from error handling, keeping the library behavior simple and predictable.
+
+
+**How does Statety handle state immutability when adding, creating, or setting values?**
+
+When you create a new key or set its value directly with a plain object, the library uses ```structuredClone``` under the hood. This deep clones the value, preventing accidental mutations to shared references and ensuring that Statety takes full ownership of the stored data. This approach is especially useful when dealing with objects or arrays, as it guards against unexpected changes elsewhere in your application.
+
+When you update state by passing a function to ```set```, Statety leverages Immer’s ```produce``` method to provide an ergonomic way to "mutate" state immutably. Your update function receives a draft state which you can safely modify as if it were mutable. Immer efficiently applies the changes, only updating what’s necessary and maintaining structural sharing resulting in optimal performance and predictable state updates.
+
 
 

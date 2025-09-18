@@ -11,6 +11,9 @@
     "build:rollup": "rollup -c",
     "build:types": "tsc"
   },
+  "dependencies": {
+    "immer": "10.1.3"
+  },
   "peerDependencies": {
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
