@@ -103,7 +103,7 @@ const USER_ORDERS_COUNT_KEY = Statety.compute(
   [USER_KEY, ORDERS_KEY],
   ([user, orders]) => {
     if (!user || !orders) return 0;
-    return orders.filter(order => order.userId === user.username).length;
+    return orders.filter(order => order.user === user.username).length;
   }
 );
 ```
@@ -158,6 +158,38 @@ function CounterApp() {
     <div>
       <p>Count: {count}</p>
       <button onClick={increment}>Increment</button>
+    </div>
+  );
+}
+```
+
+#### `useStatetySelector<T, U>(key: AnyStatetyKey<T>, selector: (state: T | null) => U, deps?: any[]): U`
+
+The ```useStatetySelector``` hook lets you subscribe to a Statety key and derive a specific piece of state or computed result via a selector function. Your component will only re-render when the output of the selector actually changes. An optional dependency array allows you to specify external parameters that should also trigger the selector to recompute.
+
+This hook offers key benefits: the selected state lives only as long as the component does, avoiding the need for creating global derived state, and it allows you to use dynamic external parameters to tailor the selection logic directly within the component.
+
+**Example:**
+```typescript
+const USER_KEY = Statety.create<{ name: string; age: number }>('user', {
+  name: "Alice",
+  age: 25,
+});
+
+function UserProfile() {
+  const [minAge, setMinAge] = useState(18);
+
+  const isOldEnough = useStatetySelector(
+    USER_KEY,
+    (user) => (user?.age ?? 0) >= minAge,
+    [minAge] // Re-run selector when minAge changes
+  );
+
+  return (
+    <div>
+      <p>Minimum Age: {minAge}</p>
+      <p>User is {isOldEnough ? "old enough" : "too young"}</p>
+      <button onClick={() => setMinAge(minAge + 1)}>Increase Min Age</button>
     </div>
   );
 }
