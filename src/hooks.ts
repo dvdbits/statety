@@ -1,7 +1,7 @@
 import { useSyncExternalStore, useCallback, useRef } from 'react';
-import statety, { AnyStatetyKey, INTERNAL } from './store';
+import statety, { StatetyKey, INTERNAL } from './store';
 
-export function useStatety<T>(key: AnyStatetyKey<T>): T | null {
+export function useStatety<T>(key: StatetyKey<T>): T | null {
     const subscribe = useCallback((callback: () => void) => {
         return statety.subscribe(key, callback);
     }, [key]);
@@ -16,7 +16,7 @@ export function useStatety<T>(key: AnyStatetyKey<T>): T | null {
 }
 
 export function useStatetyDerive<T, U>(
-    key: AnyStatetyKey<T>,
+    key: StatetyKey<T>,
     fn: (state: T | null) => U,
     deps?: any[]
 ): U {
@@ -56,7 +56,7 @@ export function useStatetyDerive<T, U>(
 }
 
 export function useStatetyCompute<T extends readonly any[], U>(
-    keys: { [K in keyof T]: AnyStatetyKey<T[K]> },
+    keys: { [K in keyof T]: StatetyKey<T[K]> },
     fn: (values: { [K in keyof T]: T[K] | null }) => U,
     deps?: any[]
 ): U {
