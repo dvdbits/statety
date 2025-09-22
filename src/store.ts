@@ -1,19 +1,21 @@
 import { produce } from "immer";
 
-export type StatetyKey<T> = symbol & { __type: T; __keyBrand?: 'state' };
+export type BasicStatetyKey<T> = symbol & { __type: T; __keyBrand?: 'state' };
 export type DerivedStatetyKey<T> = symbol & { __type: T; __keyBrand?: 'derived' };
 export type ComputedStatetyKey<T> = symbol & { __type: T; __keyBrand?: 'computed' };
 
-export type AnyStatetyKey<T> = StatetyKey<T> | DerivedStatetyKey<T> | ComputedStatetyKey<T>;
+export type StatetyKey<T> = BasicStatetyKey<T> | DerivedStatetyKey<T> | ComputedStatetyKey<T>;
 
 const store = new Map();
-const subscribers = new Map<symbol, Set<() => void>>();
+const subscribers = new Map<symbol, Set<(state: any | null) => void>>();
 const cleanupFunctions = new Map<symbol, (() => void)[]>();
+
+export const INTERNAL = Symbol("internal");
 
 class Statety {
     /* create key methods */
-    create<T>(keyName: string, defaultValue: T | null = null): StatetyKey<T> {
-        const key = Symbol(keyName) as StatetyKey<T>;
+    create<T>(keyName: string, defaultValue: T | null = null): BasicStatetyKey<T> {
+        const key = Symbol(keyName) as BasicStatetyKey<T>;
         store.set(key, null);
         subscribers.set(key, new Set());
 
@@ -23,7 +25,7 @@ class Statety {
 
     derive<T, U>(
         keyName: string,
-        sourceKey: AnyStatetyKey<T>,
+        sourceKey: StatetyKey<T>,
         computeFn: (state: T | null) => U
       ): DerivedStatetyKey<U> {
         const key = Symbol(keyName) as DerivedStatetyKey<U>;
@@ -31,7 +33,7 @@ class Statety {
         subscribers.set(key, new Set());
 
         const computeAndSet = () => {
-          const sourceValue = this.get(sourceKey);
+          const sourceValue = this.read(sourceKey);
           const derivedValue = computeFn(sourceValue);
           this.changeAndNotify(key, derivedValue);
         };
@@ -45,7 +47,7 @@ class Statety {
 
     compute<T extends readonly any[], U>(
         keyName: string,
-        deps: { [K in keyof T]: AnyStatetyKey<T[K]> },
+        deps: { [K in keyof T]: StatetyKey<T[K]> },
         fn: (values: { [K in keyof T]: T[K] }) => U
       ): ComputedStatetyKey<U> {
         const key = Symbol(keyName) as ComputedStatetyKey<U>;
@@ -53,10 +55,9 @@ class Statety {
         subscribers.set(key, new Set());
 
         const computeAndSet = () => {
-            const depValues = deps.map(depKey => this.get(depKey)) as { [K in keyof T]: T[K] };
+            const depValues = deps.map(depKey => this.read(depKey)) as { [K in keyof T]: T[K] };
             const value = fn(depValues);
-            store.set(key, value);
-            this.notify(key);
+            this.changeAndNotify(key, value);
         };
 
         const cleanups: (() => void)[] = [];
@@ -71,23 +72,27 @@ class Statety {
     }
 
     /* action methods */
-
-    get<T>(key: AnyStatetyKey<T>): T | null {
+    read<T>(key: StatetyKey<T>): T | null {
         if (!store.has(key)) {
             return null;
         }
 
-        return store.get(key) as T | null;
+        const value = this.get(key);
+        if (value !== null && typeof value === "object") {
+            return structuredClone(value);
+        }
+
+        return value;
     }
 
-    set<T>(key: StatetyKey<T>, value: T | null | ((state: T | null) => T| null)) {
+    set<T>(key: BasicStatetyKey<T>, value: T | null | ((state: T | null) => T| null)) {
         if (!store.has(key)) {
             return; // Silent fail
         }
 
         let updatedValue = value;
         if (typeof value === 'function') {
-            const currentState = store.get(key) as T | null;
+            const currentState = this.get(key);
             updatedValue = produce(currentState, (draft: T | null) => {
                 return (value as (state: T | null) => T | null)(draft);
             });
@@ -98,7 +103,7 @@ class Statety {
         this.changeAndNotify(key, updatedValue);
     }
 
-    subscribe<T>(key: AnyStatetyKey<T>, callback: () => void): () => void {
+    subscribe<T>(key: StatetyKey<T>, callback: (state: T | null) => void): () => void {
         if (!store.has(key)) {
             // Return a no-op unsubscribe function
             return () => {};
@@ -108,16 +113,26 @@ class Statety {
         if (keySubscribers) {
             keySubscribers.add(callback);
         }
-        
-        return () => {
+
+        const cleanup = () => {
             const keySubscribers = subscribers.get(key);
             if (keySubscribers) {
                 keySubscribers.delete(callback);
             }
         };
+
+        const keyCleanupFunctions = cleanupFunctions.get(key);
+        if (keyCleanupFunctions) {
+            keyCleanupFunctions.push(cleanup);
+        } else {
+            cleanupFunctions.set(key, [cleanup]);
+        }
+
+        
+        return cleanup;
     }
 
-    delete<T>(key: AnyStatetyKey<T>) {
+    delete<T>(key: StatetyKey<T>) {
         this.changeAndNotify(key, null);
 
         subscribers.delete(key);
@@ -129,21 +144,33 @@ class Statety {
         store.delete(key);
     }
 
-    /* private methods */
+    /* internals */
+    [INTERNAL] = {
+        get: this.get.bind(this)
+    };
 
-    private notify<T>(key: AnyStatetyKey<T>) {
+    /* private methods */
+    private get<T>(key: StatetyKey<T>): T | null {
+        if (!store.has(key)) {
+            return null;
+        }
+
+        return store.get(key) as T | null;
+    }
+
+    private notify<T>(key: StatetyKey<T>, value: T | null) {
         const keySubscribers = subscribers.get(key);
         if (keySubscribers) {
-            keySubscribers.forEach(callback => callback());
+            keySubscribers.forEach(callback => callback(value));
         }
     }
 
-    private changeAndNotify<T>(key: AnyStatetyKey<T>, value: T | null) {
-        const oldValue = store.get(key) as T | null;
+    private changeAndNotify<T>(key: StatetyKey<T>, value: T | null) {
+        const oldValue = this.get(key);
     
         if (oldValue !== value) {
             store.set(key, value);
-            this.notify(key);
+            this.notify(key, value);
         }
     }
 }

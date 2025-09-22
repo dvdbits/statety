@@ -1,5 +1,5 @@
 import Statety from "./store";
-import { useStatety } from "./hooks";
+import { useStatety, useStatetyDerive, useStatetyCompute } from "./hooks";
 
 export default Statety;
-export { useStatety };
+export { useStatety, useStatetyDerive, useStatetyCompute };
