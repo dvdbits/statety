@@ -7,7 +7,7 @@ export type ComputedStatetyKey<T> = symbol & { __type: T; __keyBrand?: 'computed
 export type AnyStatetyKey<T> = StatetyKey<T> | DerivedStatetyKey<T> | ComputedStatetyKey<T>;
 
 const store = new Map();
-const subscribers = new Map<symbol, Set<() => void>>();
+const subscribers = new Map<symbol, Set<(state: any | null) => void>>();
 const cleanupFunctions = new Map<symbol, (() => void)[]>();
 
 class Statety {
@@ -55,8 +55,7 @@ class Statety {
         const computeAndSet = () => {
             const depValues = deps.map(depKey => this.get(depKey)) as { [K in keyof T]: T[K] };
             const value = fn(depValues);
-            store.set(key, value);
-            this.notify(key);
+            this.changeAndNotify(key, value);
         };
 
         const cleanups: (() => void)[] = [];
@@ -98,7 +97,7 @@ class Statety {
         this.changeAndNotify(key, updatedValue);
     }
 
-    subscribe<T>(key: AnyStatetyKey<T>, callback: () => void): () => void {
+    subscribe<T>(key: AnyStatetyKey<T>, callback: (state: T | null) => void): () => void {
         if (!store.has(key)) {
             // Return a no-op unsubscribe function
             return () => {};
@@ -141,10 +140,10 @@ class Statety {
 
     /* private methods */
 
-    private notify<T>(key: AnyStatetyKey<T>) {
+    private notify<T>(key: AnyStatetyKey<T>, value: T | null) {
         const keySubscribers = subscribers.get(key);
         if (keySubscribers) {
-            keySubscribers.forEach(callback => callback());
+            keySubscribers.forEach(callback => callback(value));
         }
     }
 
@@ -153,7 +152,7 @@ class Statety {
     
         if (oldValue !== value) {
             store.set(key, value);
-            this.notify(key);
+            this.notify(key, value);
         }
     }
 }
