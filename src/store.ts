@@ -10,6 +10,8 @@ const store = new Map();
 const subscribers = new Map<symbol, Set<(state: any | null) => void>>();
 const cleanupFunctions = new Map<symbol, (() => void)[]>();
 
+export const INTERNAL = Symbol("internal");
+
 class Statety {
     /* create key methods */
     create<T>(keyName: string, defaultValue: T | null = null): StatetyKey<T> {
@@ -31,7 +33,7 @@ class Statety {
         subscribers.set(key, new Set());
 
         const computeAndSet = () => {
-          const sourceValue = this.get(sourceKey);
+          const sourceValue = this.read(sourceKey);
           const derivedValue = computeFn(sourceValue);
           this.changeAndNotify(key, derivedValue);
         };
@@ -53,7 +55,7 @@ class Statety {
         subscribers.set(key, new Set());
 
         const computeAndSet = () => {
-            const depValues = deps.map(depKey => this.get(depKey)) as { [K in keyof T]: T[K] };
+            const depValues = deps.map(depKey => this.read(depKey)) as { [K in keyof T]: T[K] };
             const value = fn(depValues);
             this.changeAndNotify(key, value);
         };
@@ -70,13 +72,17 @@ class Statety {
     }
 
     /* action methods */
-
-    get<T>(key: AnyStatetyKey<T>): T | null {
+    read<T>(key: AnyStatetyKey<T>): T | null {
         if (!store.has(key)) {
             return null;
         }
 
-        return store.get(key) as T | null;
+        const value = this.get(key);
+        if (value !== null && typeof value === "object") {
+            return structuredClone(value);
+        }
+
+        return value;
     }
 
     set<T>(key: StatetyKey<T>, value: T | null | ((state: T | null) => T| null)) {
@@ -86,7 +92,7 @@ class Statety {
 
         let updatedValue = value;
         if (typeof value === 'function') {
-            const currentState = store.get(key) as T | null;
+            const currentState = this.get(key);
             updatedValue = produce(currentState, (draft: T | null) => {
                 return (value as (state: T | null) => T | null)(draft);
             });
@@ -138,7 +144,19 @@ class Statety {
         store.delete(key);
     }
 
+    /* internals */
+    [INTERNAL] = {
+        get: this.get.bind(this)
+    };
+
     /* private methods */
+    private get<T>(key: AnyStatetyKey<T>): T | null {
+        if (!store.has(key)) {
+            return null;
+        }
+
+        return store.get(key) as T | null;
+    }
 
     private notify<T>(key: AnyStatetyKey<T>, value: T | null) {
         const keySubscribers = subscribers.get(key);
@@ -148,7 +166,7 @@ class Statety {
     }
 
     private changeAndNotify<T>(key: AnyStatetyKey<T>, value: T | null) {
-        const oldValue = store.get(key) as T | null;
+        const oldValue = this.get(key);
     
         if (oldValue !== value) {
             store.set(key, value);

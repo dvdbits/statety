@@ -1,5 +1,5 @@
-import { useSyncExternalStore, useCallback, useState, useRef, useEffect } from 'react';
-import statety, { AnyStatetyKey } from './store';
+import { useSyncExternalStore, useCallback, useRef } from 'react';
+import statety, { AnyStatetyKey, INTERNAL } from './store';
 
 export function useStatety<T>(key: AnyStatetyKey<T>): T | null {
     const subscribe = useCallback((callback: () => void) => {
@@ -7,7 +7,7 @@ export function useStatety<T>(key: AnyStatetyKey<T>): T | null {
     }, [key]);
 
     const getSnapshot = useCallback(() => {
-        return statety.get(key);
+        return statety[INTERNAL].get(key);
     }, [key]);
 
     const value = useSyncExternalStore(subscribe, getSnapshot);
@@ -15,22 +15,40 @@ export function useStatety<T>(key: AnyStatetyKey<T>): T | null {
     return value;
 }
 
-
 export function useStatetyDerive<T, U>(
     key: AnyStatetyKey<T>,
     fn: (state: T | null) => U,
     deps?: any[]
 ): U {
     const memoizedSelector = useCallback(fn, deps || []);
+    const lastStateRef = useRef<T | null>(null);
+    const lastDepsRef = useRef<any[] | null>(null);
+    const lastResultRef = useRef<U | null>(null);
     
     const subscribe = useCallback((callback: () => void) => {
         return statety.subscribe(key, callback);
     }, [key]);
 
     const getSnapshot = useCallback(() => {
-        const currentState = statety.get(key);
-        return memoizedSelector(currentState);
-    }, [key, memoizedSelector]);
+        const currentState = statety[INTERNAL].get(key);
+        const currentDeps = deps || [];
+        
+        // Only recompute if the state reference OR deps have changed
+        if (currentState !== lastStateRef.current || 
+            !lastDepsRef.current || 
+            currentDeps.length !== lastDepsRef.current.length ||
+            currentDeps.some((dep, index) => dep !== lastDepsRef.current![index])) {
+            
+            const clonedState = statety.read(key);
+            const result = memoizedSelector(clonedState);
+            lastStateRef.current = currentState;
+            lastDepsRef.current = currentDeps;
+            lastResultRef.current = result;
+            return result;
+        }
+        
+        return lastResultRef.current!;
+    }, [key, memoizedSelector, deps]);
 
     const value = useSyncExternalStore(subscribe, getSnapshot);
 
@@ -43,6 +61,9 @@ export function useStatetyCompute<T extends readonly any[], U>(
     deps?: any[]
 ): U {
     const memoizedSelector = useCallback(fn, deps || []);
+    const lastStatesRef = useRef<{ [K in keyof T]: T[K] | null } | null>(null);
+    const lastDepsRef = useRef<any[] | null>(null);
+    const lastResultRef = useRef<U | null>(null);
     
     const subscribe = useCallback((callback: () => void) => {
         const unsubscribes = keys.map(key => statety.subscribe(key, callback));
@@ -53,9 +74,26 @@ export function useStatetyCompute<T extends readonly any[], U>(
     }, [keys]);
 
     const getSnapshot = useCallback(() => {
-        const values = keys.map(key => statety.get(key)) as { [K in keyof T]: T[K] | null };
-        return memoizedSelector(values);
-    }, [keys, memoizedSelector]);
+        const currentStates = keys.map(key => statety[INTERNAL].get(key)) as { [K in keyof T]: T[K] | null };
+        const currentDeps = deps || [];
+        
+        // Only recompute if any state reference OR deps have changed
+        if (!lastStatesRef.current || 
+            currentStates.some((state, index) => state !== lastStatesRef.current![index]) ||
+            !lastDepsRef.current ||
+            currentDeps.length !== lastDepsRef.current.length ||
+            currentDeps.some((dep, index) => dep !== lastDepsRef.current![index])) {
+            
+            const clonedStates = keys.map(key => statety.read(key)) as { [K in keyof T]: T[K] | null };
+            const result = memoizedSelector(clonedStates);
+            lastStatesRef.current = currentStates;
+            lastDepsRef.current = currentDeps;
+            lastResultRef.current = result;
+            return result;
+        }
+        
+        return lastResultRef.current!;
+    }, [keys, memoizedSelector, deps]);
 
     const value = useSyncExternalStore(subscribe, getSnapshot);
 
