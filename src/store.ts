@@ -108,13 +108,23 @@ class Statety {
         if (keySubscribers) {
             keySubscribers.add(callback);
         }
-        
-        return () => {
+
+        const cleanup = () => {
             const keySubscribers = subscribers.get(key);
             if (keySubscribers) {
                 keySubscribers.delete(callback);
             }
         };
+
+        const keyCleanupFunctions = cleanupFunctions.get(key);
+        if (keyCleanupFunctions) {
+            keyCleanupFunctions.push(cleanup);
+        } else {
+            cleanupFunctions.set(key, [cleanup]);
+        }
+
+        
+        return cleanup;
     }
 
     delete<T>(key: AnyStatetyKey<T>) {
