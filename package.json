@@ -1,0 +1,61 @@
+{
+  "name": "statety",
+  "version": "1.0.0",
+  "description": "A simple React state management library built around reactive key-value stores",
+  "main": "dist/index.cjs",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "rollup -c && tsc",
+    "build:rollup": "rollup -c",
+    "build:types": "tsc",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "docs:dev": "cd docs && npm run dev",
+    "docs:build": "cd docs && npm run build",
+    "docs:preview": "cd docs && npm run preview"
+  },
+  "keywords": [
+    "react",
+    "state-management",
+    "hooks",
+    "typescript",
+    "reactive",
+    "global-state",
+    "redux",
+    "store"
+  ],
+  "author": "Cioara David-Darius",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dvdbits/statety.git"
+  },
+  "homepage": "soon",
+  "bugs": {
+    "url": "https://github.com/dvdbits/statety/issues"
+  },
+  "dependencies": {
+    "immer": "10.1.3"
+  },
+  "peerDependencies": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.0",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "jsdom": "^27.0.0",
+    "rollup": "^4.50.1",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
