@@ -48,7 +48,7 @@ class Statety {
     compute<T extends readonly any[], U>(
         keyName: string,
         deps: { [K in keyof T]: StatetyKey<T[K]> },
-        fn: (values: { [K in keyof T]: T[K] }) => U
+        fn: (values: { [K in keyof T]: T[K] | null }) => U
       ): ComputedStatetyKey<U> {
         const key = Symbol(keyName) as ComputedStatetyKey<U>;
         store.set(key, null);
@@ -119,6 +119,11 @@ class Statety {
             if (keySubscribers) {
                 keySubscribers.delete(callback);
             }
+
+            const keyCleanupFunctions = cleanupFunctions.get(key);
+            if (keyCleanupFunctions) {
+                keyCleanupFunctions.splice(keyCleanupFunctions.indexOf(cleanup), 1);
+            }
         };
 
         const keyCleanupFunctions = cleanupFunctions.get(key);
@@ -146,7 +151,9 @@ class Statety {
 
     /* internals */
     [INTERNAL] = {
-        get: this.get.bind(this)
+        get: this.get.bind(this),
+        getKeySubscribers: this.getKeySubscribers.bind(this),
+        getKeyCleanupFunctions: this.getKeyCleanupFunctions.bind(this)
     };
 
     /* private methods */
@@ -172,6 +179,14 @@ class Statety {
             store.set(key, value);
             this.notify(key, value);
         }
+    }
+
+    private getKeySubscribers<T>(key: StatetyKey<T>): Set<(state: T | null) => void> {
+        return subscribers.get(key) || new Set();
+    }
+
+    private getKeyCleanupFunctions<T>(key: StatetyKey<T>): (() => void)[] {
+        return cleanupFunctions.get(key) || [];
     }
 }
 
