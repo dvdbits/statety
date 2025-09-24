@@ -40,4 +40,4 @@ It's that simple to get started!
 
 ## Documentation
 
-If you want to dive into the details of Statety’s concepts and API, check out the full documentation site: [Documentation](https://your-docs-site-url.com)
+If you want to dive into the details of Statety’s concepts and API, check out the full documentation site: [Documentation](https://statety.dev)
