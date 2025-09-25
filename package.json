@@ -31,13 +31,13 @@
     "redux",
     "store"
   ],
-  "author": "Cioara David-Darius",
+  "author": "David Cioara",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/dvdbits/statety.git"
   },
-  "homepage": "soon",
+  "homepage": "https://statety.dev",
   "bugs": {
     "url": "https://github.com/dvdbits/statety/issues"
   },

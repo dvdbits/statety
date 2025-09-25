@@ -1,0 +1,13 @@
+src/
+tests/
+docs/
+node_modules/
+*.log
+.git/
+.gitignore
+.npmignore
+rollup.config.js
+vitest.config.ts
+tsconfig.json
+*.test.ts
+*.test.tsx
