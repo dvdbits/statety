@@ -31,7 +31,7 @@ export function useStatetyCompute<T extends readonly any[], U>(
 
 ```ts
 import { useState } from "react";
-import { Statety, useStatetyCompute } from "statety";
+import Statety, { useStatetyCompute } from "statety";
 
 const USER_KEY = Statety.create<{ username: string; role: string }>("user", {
   username: "guest",

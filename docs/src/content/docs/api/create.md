@@ -26,7 +26,7 @@ Statety.create<T>(keyName: string, defaultValue?: T | null): StatetyKey<T>
 ### Basic Usage
 
 ```ts
-import { Statety } from "statety";
+import Statety from "statety";
 
 // Create a basic global state key
 const USER_KEY = Statety.create<{ username: string; role: string }>("user", {
@@ -37,7 +37,7 @@ const USER_KEY = Statety.create<{ username: string; role: string }>("user", {
 
 ### Without Initial Value
 ```ts
-import { Statety } from "statety";
+import Statety from "statety";
 
 // State without providing a default value
 const COUNTER_KEY = Statety.create<number>("counter");

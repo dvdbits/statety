@@ -21,7 +21,7 @@ Statety.read<T>(key: AnyStatetyKey<T>): T | null
 ## Example
 
 ```ts
-import { Statety } from "statety";
+import Statety from "statety";
 
 const USER_KEY = Statety.create<{ username: string; role: string }>("user", {
   username: "guest",

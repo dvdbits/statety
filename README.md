@@ -13,7 +13,7 @@ npm install statety
 Create and use global state in your React app:
 
 ```typescript
-import { Statety, useStatety } from "statety";
+import Statety, { useStatety } from "statety";
 
 // Create a global counter key
 const COUNTER_KEY = Statety.create<number>("counter", 0);

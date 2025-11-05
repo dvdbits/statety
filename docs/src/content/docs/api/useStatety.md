@@ -24,7 +24,7 @@ function useStatety<T>(key: AnyStatetyKey<T>): T | null
 ### Basic Usage in a React Component
 
 ```ts
-import { Statety, useStatety } from "statety";
+import Statety, { useStatety } from "statety";
 
 const counterKey = Statety.create<number>("counter", 0);
 
