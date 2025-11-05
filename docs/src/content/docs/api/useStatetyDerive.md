@@ -30,7 +30,7 @@ function useStatetyDerive<T, U>(
 ### Using a Selector
 
 ```ts
-import { Statety, useStatetyDerive } from "statety";
+import Statety, { useStatetyDerive } from "statety";
 
 const USER_KEY = Statety.create<{ name: string; age: number }>("user", {
   name: "Alice",

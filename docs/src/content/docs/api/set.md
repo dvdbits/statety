@@ -28,7 +28,7 @@ Statety.set<T>(
 ### Replacing the entire State
 
 ```ts
-import { Statety } from "statety";
+import Statety from "statety";
 
 const USER_KEY = Statety.create<{ username: string; role: string }>("user", {
   username: "guest",

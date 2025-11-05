@@ -24,7 +24,7 @@ Statety.delete<T>(key: AnyStatetyKey<T>): void
 ### Deleting a State Key
 
 ```ts
-import { Statety } from "statety";
+import Statety from "statety";
 
 const USER_KEY = Statety.create<{ username: string }>("user", {
   username: "guest",

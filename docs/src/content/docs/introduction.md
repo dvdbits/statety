@@ -19,7 +19,7 @@ npm install statety
 Here’s a minimal counter example showing how to create global state, read it in a component, and update it:
 
 ```typescript
-import { Statety, useStatety } from "statety";
+import Statety, { useStatety } from "statety";
 
 // 1. Create a global state key
 const counterKey = Statety.create<number>("counter", 0);
